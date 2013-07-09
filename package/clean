@@ -1,0 +1,9 @@
+#!/bin/sh
+
+if [ -d compile ] ; then
+  rm -rfv compile
+fi
+
+if [ -d command ] ; then
+  rm -rfv command
+fi
