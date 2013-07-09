@@ -15,6 +15,7 @@ int getnumber(char *buf, int len, unsigned long *u)
   if (!stralloc_copyb(&sanumber,buf,len)) return -1;
   if (!stralloc_0(&sanumber)) return -1;
   if (sanumber.s[scan_ulong(sanumber.s,u)]) return -1;
+  return 0;
 }
 
 int getaddressasbit(char *ip, int prefix, stralloc *ip4string)
