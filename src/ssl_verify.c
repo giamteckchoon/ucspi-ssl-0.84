@@ -26,7 +26,7 @@ int ssl_verify(SSL *ssl,const char *hostname)
   if (!cert) return -2;
 
   if (hostname) {
-    extensions = (GENERAL_NAME *)X509_get_ext_d2i(cert,NID_subject_alt_name,0,0);
+    extensions = (STACK_OF(GENERAL_NAME) *)X509_get_ext_d2i(cert,NID_subject_alt_name,0,0);
     num = sk_GENERAL_NAME_num(extensions); 	/* num = 0, if no SAN extensions */
 
     for (i = 0; i < num; ++i) {
