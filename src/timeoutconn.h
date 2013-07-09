@@ -3,6 +3,6 @@
 
 #include "uint16.h"
 
-extern int timeoutconn(int,char *,uint16,unsigned int);
+extern int timeoutconn(int,socket_address *,unsigned int);
 
 #endif

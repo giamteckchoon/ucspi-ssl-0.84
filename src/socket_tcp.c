@@ -6,11 +6,11 @@
 #include "ndelay.h"
 #include "socket.h"
 
-int socket_tcp(void)
+int socket_tcp(int domain, int proto)
 {
   int s;
 
-  s = socket(AF_INET,SOCK_STREAM,0);
+  s = socket(domain,SOCK_STREAM,proto);
   if (s == -1) return -1;
   if (ndelay_on(s) == -1) { close(s); return -1; }
   return s;

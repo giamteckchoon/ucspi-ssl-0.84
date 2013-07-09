@@ -1,6 +1,7 @@
 #include <unistd.h>
 #include "fmt.h"
 #include "buffer.h"
+#include "ip.h"
 #include "socket.h"
 #include "error.h"
 #include "iopause.h"
@@ -46,16 +47,32 @@ static int myread(int fd,char *buf,int len)
   return buffer_unixread(fd,buf,len);
 }
 
-static int doit(stralloc *out,int s,char ipremote[4],uint16 portremote,char iplocal[4],uint16 portlocal,unsigned int timeout)
+static int doit(stralloc *out,int s,socket_address *remote,socket_address *local,unsigned int timeout)
 {
   buffer b;
   char bspace[128];
   char strnum[FMT_ULONG];
   int numcolons;
   char ch;
+  struct addrinfo ai = {0};
+  uint16 portremote, portlocal;
+  socket_address sa;
 
-  if (socket_bind4(s,iplocal,0) == -1) return -1;
-  if (timeoutconn(s,ipremote,113,timeout) == -1) return -1;
+  ai.ai_addr = local;
+  ai.ai_addrlen = sizeof *local;
+  if (socket_bind(s,&ai) == -1) return -1;
+  byte_copy(&sa, sizeof(sa), remote);
+  uint16_pack_big(sa.sa4.sin_family == AF_INET ? &sa.sa4.sin_port
+					       : &sa.sa6.sin6_port, 113);
+  ai.ai_addr = &sa;
+  if (timeoutconn(s,&sa,timeout) == -1) return -1;
+
+  uint16_unpack_big(remote->sa4.sin_family == AF_INET ? &remote->sa4.sin_port
+						      : &remote->sa6.sin6_port,
+		    &portremote);
+  uint16_unpack_big(local->sa4.sin_family == AF_INET ? &local->sa4.sin_port
+						     : &local->sa6.sin6_port,
+		    &portlocal);
 
   buffer_init(&b,mywrite,s,bspace,sizeof bspace);
   buffer_put(&b,strnum,fmt_ulong(strnum,portremote));
@@ -80,7 +97,7 @@ static int doit(stralloc *out,int s,char ipremote[4],uint16 portremote,char iplo
   }
 }
 
-int remoteinfo(stralloc *out,char ipremote[4],uint16 portremote,char iplocal[4],uint16 portlocal,unsigned int timeout)
+int remoteinfo(stralloc *out,socket_address *remote,socket_address *local,unsigned int timeout)
 {
   int s;
   int r;
@@ -91,9 +108,9 @@ int remoteinfo(stralloc *out,char ipremote[4],uint16 portremote,char iplocal[4],
   taia_uint(&deadline,timeout);
   taia_add(&deadline,&now,&deadline);
 
-  s = socket_tcp();
+  s = socket_tcp(local->sa4.sin_family, 0);
   if (s == -1) return -1;
-  r = doit(out,s,ipremote,portremote,iplocal,portlocal,timeout);
+  r = doit(out,s,remote,local,timeout);
   close(s);
   return r;
 }

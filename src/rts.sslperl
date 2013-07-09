@@ -20,16 +20,29 @@ sslperl -w 2 \
 127.0.0.1 50022 hello.pm 'Embedded::test::server' here you are \
 3< ../../etc/127.0.0.1.pw >log.50022 2>&1 &
 pid_50022=$!
+
+sslperl -6 -w 2 \
+-s -c 1 -Bsslperl -vo -D -1 -3 -Xx rules.cdb -Rt5 -hp -l Localserver -b 2 \
+-a -A \
+localhost 50023 hello.pm 'Embedded::test::server' here you are \
+3< ../../etc/127.0.0.1.pw >log.50023 2>&1 &
+pid_50023=$!
 sleep 2
 
 echo '--- sslperl works'
-{ sslclient -R -N -H -T 10 -l Local -a "$CAFILE" 0 50022 sh -c 'cat <&6'
+{ sslclient -4 -R -N -H -T 10 -l Local -a "$CAFILE" 0 50022 sh -c 'cat <&6'
   echo $?
 } | sanitize
-{ sslclient -R -N -H -T 10 -l Local -a "$CAFILE" 0 50022 sh -c 'cat <&6'
+{ sslclient -R -N -H -T 10 -l Local -a "$CAFILE" localhost 50022 sh -c 'cat <&6'
   echo $?
 } | sanitize
-{ sslclient -R -N -H -T 10 -l Local -a "$CAFILE" 0 50022 sh -c 'cat <&6'
+{ sslclient -R -H -T 10 -l Local -a "$CAFILE" localhost 50023 sh -c 'cat <&6'
+  echo $?
+} | sanitize
+{ sslclient -6 -R -H -T 10 -l Local -a "$CAFILE" localhost 50022 sh -c 'cat <&6'
+  echo $?
+} | sanitize
+{ sslclient -6 -R -H -T 10 -l Local -a "$CAFILE" localhost 50023 sh -c 'cat <&6'
   echo $?
 } | sanitize
 { sslclient -R -N -H -T 10 -l Local -X 0 50022 sh -c 'cat <&6'
@@ -53,8 +66,17 @@ echo '--- sslperl prints error message with non-local host name'
   echo $?
 ) | sed -e 's/unable to bind: .*$/unable to bind: .../'
 
+echo '--- sslperl -4 works'
+sslperl -4 -w 2 \
+-s -c 1 -Bsslperl -vo -D -1 -3 -Xx rules.cdb -Rt5 -hp -l Localserver -b 2 \
+-a -A \
+localhost 50022 hello.pm 'Embedded::test::server' here you are \
+3< ../../etc/127.0.0.1.pw 2>&1
+
 kill -TERM $pid_50022
+kill -TERM $pid_50023
 wait $pid_50022
+wait $pid_50023
 
 echo '--- sslperl preserves environment'
 echo 'package Embedded::test;
@@ -77,7 +99,7 @@ sslperl -w 2 \
 pid_50022=$!
 sleep 2
 
-{ sslclient -R -N -H -T 10 -l Local -a "$CAFILE" 0 50022 sh -c 'cat <&6'
+{ sslclient -R -N -H -T 10 -l Local -a "$CAFILE" localhost 50022 sh -c 'cat <&6'
   echo $?
 } | sanitize
 
@@ -129,7 +151,7 @@ kill -TERM $pid_50022
 wait $pid_50022
 
 echo '--- sslserver -1v prints proper messages'
-cat log.50022 | \
+cat log.50022 log.50023 | \
 sed -e 's/::.*/::x/' -e 's/ [0-9]* / x /' \
   -e 's} cafile x .*/\([^/]*\)} cafile x xxx/\1}' \
   -e 's} ccafile x .*/\([^/]*\)} ccafile x xxx/\1}' \

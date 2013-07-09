@@ -11,7 +11,7 @@
 #include "fmt.h"
 #include "scan.h"
 #include "str.h"
-#include "ip4.h"
+#include "ip.h"
 #include "uint16.h"
 #include "socket.h"
 #include "fd.h"
@@ -23,7 +23,6 @@
 #include "pathexec.h"
 #include "timeoutconn.h"
 #include "remoteinfo.h"
-#include "dns.h"
 #include "auto_cafile.h"
 #include "auto_cadir.h"
 #include "auto_ciphers.h"
@@ -47,7 +46,7 @@ int error_warn(const char *x) {
 }
 void usage(void) {
   strerr_die1x(100,"sslclient: usage: sslclient \
-[ -3hHrRdDqQveEsSnNxX ] \
+[ -346hHrRdDqQveEsSnNxX ] \
 [ -i localip ] \
 [ -p localport ] \
 [ -T timeoutconn ] \
@@ -74,23 +73,18 @@ unsigned long itimeout = 26;
 unsigned long ctimeout[2] = { 2, 58 };
 unsigned int progtimeout = 3600;
 
-char iplocal[4] = { 0,0,0,0 };
-uint16 portlocal = 0;
 const char *forcelocal = 0;
 
-char ipremote[4];
-uint16 portremote;
+socket_address local, remote;
 
-const char *hostname;
+char *hostname;
 int flagname = 1;
 int flagservercert = 1;
-static stralloc addresses;
 static stralloc moreaddresses;
 
 static stralloc tmp;
-static stralloc fqdn;
 char strnum[FMT_ULONG];
-char ipstr[IP4_FMT];
+static stralloc ipstr;
 
 char seed[128];
 
@@ -132,20 +126,21 @@ int passwd_cb(char *buf,int size,int rwflag,void *userdata) {
 int main(int argc,char * const *argv) {
   unsigned long u;
   int opt;
-  const char *x;
+  const char *x, *portname, *localname = NULL, *portlocal = NULL;
   int j;
   int s;
   int cloop;
   SSL *ssl;
   int wstat;
-
-  dns_random_init(seed);
+  struct addrinfo *to_bind = NULL, *to_connect = NULL, hints = {0}, *bindme;
+  uint16 port;
 
   close(6);
   close(7);
   sig_ignore(sig_pipe);
  
-  while ((opt = getopt(argc,argv,"dDvqQhHrRi:p:t:T:l:a:A:c:z:k:V:3eEsSnN0xXw:")) != opteof)
+  hints.ai_family = AF_UNSPEC;
+  while ((opt = getopt(argc,argv,"dDvqQhHrRi:p:t:T:l:a:A:c:z:k:V:3eEsSnN0xXw:46")) != opteof)
     switch(opt) {
       case 'd': flagdelay = 1; break;
       case 'D': flagdelay = 0; break;
@@ -163,8 +158,8 @@ int main(int argc,char * const *argv) {
 		scan_ulong(optarg + j,&ctimeout[1]);
 		break;
       case 'w': scan_uint(optarg,&progtimeout); break;
-      case 'i': if (!ip4_scan(optarg,iplocal)) usage(); break;
-      case 'p': scan_ulong(optarg,&u); portlocal = u; break;
+      case 'i': localname = optarg; break;
+      case 'p': portlocal = optarg; break;
       case 'a': cafile = optarg; break;
       case 'A': cadir = optarg; break;
       case 'c': certfile = optarg; break;
@@ -180,6 +175,8 @@ int main(int argc,char * const *argv) {
       case 'n': flagname = 1; break;
       case 'x': flagservercert = 1; break;
       case 'X': flagservercert = 0; break;
+      case '4': hints.ai_family = AF_INET; break;
+      case '6': hints.ai_family = AF_INET6; break;
       default: usage();
     }
   argv += optind;
@@ -191,18 +188,14 @@ int main(int argc,char * const *argv) {
   if (!hostname) usage();
   if (str_equal(hostname,"")) hostname = "127.0.0.1";
   if (str_equal(hostname,"0")) hostname = "127.0.0.1";
-
-  x = *++argv;
-  if (!x) usage();
-  if (!x[scan_ulong(x,&u)])
-    portremote = u;
-  else {
-    struct servent *se;
-    se = getservbyname(x,"tcp");
-    if (!se)
-      strerr_die3x(111,FATAL,"unable to figure out port number for ",x);
-    portremote = ntohs(se->s_port);
+  j = strlen(hostname);
+  if (*hostname == '[' && hostname[j-1] == ']') {
+    hostname[j-1] = 0;
+    hostname++;
   }
+
+  portname = *++argv;
+  if (!portname) usage();
 
   if (flag3) read_passwd();
 
@@ -215,39 +208,62 @@ int main(int argc,char * const *argv) {
 
   if (!*++argv) usage();
 
-  if (!stralloc_copys(&tmp,hostname)) nomem();
-  if (dns_ip4_qualify(&addresses,&fqdn,&tmp) == -1)
-    strerr_die4sys(111,FATAL,"temporarily unable to figure out IP address for ",hostname,": ");
-  if (addresses.len < 4)
-    strerr_die3x(111,FATAL,"no IP address for ",hostname);
+  hints.ai_socktype = SOCK_STREAM;
+  if (hints.ai_family == AF_UNSPEC) {
+    hints.ai_flags |= AI_ADDRCONFIG | AI_V4MAPPED;
+  }
+  if (localname || portlocal) {
+    errno = getaddrinfo(localname, portlocal, &hints, &to_bind);
+    if (errno)
+      strerr_die5x(111,FATAL,"temporarily unable to figure out IP address for ",localname,": ",gai_strerror(errno));
+    if (!to_bind)
+      strerr_die5x(111,FATAL,"no address for ",localname?localname:"''","/",portlocal?portlocal:"0");
+  }
 
-  if (addresses.len == 4) {
+  errno = getaddrinfo(hostname, portname, &hints, &to_connect);
+  if (errno)
+    strerr_die5x(111,FATAL,"temporarily unable to figure out IP address for ",hostname,": ",gai_strerror(errno));
+  if (!to_connect)
+    strerr_die5x(111,FATAL,"no address for ",hostname,"/",portname);
+ 
+  if (!to_connect->ai_next) {
     ctimeout[0] += ctimeout[1];
     ctimeout[1] = 0;
   }
 
   s = -1;
+  if (!stralloc_copys(&moreaddresses,"")) nomem();
   for (cloop = 0;cloop < 2;++cloop) {
-    if (!stralloc_copys(&moreaddresses,"")) nomem();
-    for (j = 0;j + 4 <= addresses.len;j += 4) {
-      s = socket_tcp();
+    for (j=0, hints.ai_next = to_connect; hints.ai_next; hints.ai_next = hints.ai_next->ai_next, j++) {
+      bindme = to_bind;
+      while (bindme && bindme->ai_family != hints.ai_next->ai_family)
+       bindme = bindme->ai_next;
+      if (!bindme && to_bind) { continue; }
+      if (cloop && !moreaddresses.s[j]) { continue; }
+      if (hints.ai_next->ai_family > AF_MAX) { continue; }
+      s = socket_tcp(hints.ai_next->ai_family, hints.ai_next->ai_protocol);
       if (s == -1)
         strerr_die2sys(111,FATAL,"unable to create socket: ");
-      if (socket_bind4(s,iplocal,portlocal) == -1)
+      if (bindme && socket_bind(s,bindme) == -1)
         strerr_die2sys(111,FATAL,"unable to bind socket: ");
-      if (timeoutconn(s,addresses.s + j,portremote,ctimeout[cloop]) == 0)
+      byte_copy(&remote, hints.ai_next->ai_addrlen, hints.ai_next->ai_addr);
+      if (timeoutconn(s,&remote,ctimeout[cloop]) == 0)
         goto CONNECTED;
       close(s);
       if (!cloop && ctimeout[1] && (errno == error_timeout)) {
-	if (!stralloc_catb(&moreaddresses,addresses.s + j,4)) nomem();
+	if (!stralloc_catb(&moreaddresses,"\001",1)) nomem();
       }
       else {
-        strnum[fmt_ulong(strnum,portremote)] = 0;
-        ipstr[ip4_fmt(ipstr,addresses.s + j)] = 0;
-        strerr_warn5(CONNECT,ipstr," port ",strnum,": ",&strerr_sys);
+	if (!stralloc_catb(&moreaddresses,"",1)) nomem();
+	uint16_unpack_big(remote.sa4.sin_family == AF_INET ? &(remote.sa4.sin_port)
+							   : &(remote.sa6.sin6_port),
+			  &port);
+	strnum[fmt_ulong(strnum,port)] = 0;
+	if ((opt = ip_fmt(&ipstr,(socket_address *) hints.ai_next->ai_addr)))
+	  strerr_die3x(111, FATAL, "unable to print local ip: ",gai_strerror(opt));
+        strerr_warn5(CONNECT,ipstr.s," port ",strnum,": ",&strerr_sys);
       }
     }
-    if (!stralloc_copy(&addresses,&moreaddresses)) nomem();
   }
 
   _exit(111);
@@ -256,41 +272,39 @@ int main(int argc,char * const *argv) {
 
   env("PROTO","SSL");
 
-  if (socket_local4(s,iplocal,&portlocal) == -1)
+  if (socket_local(s,&local,&port) == -1)
     strerr_die2sys(111,FATAL,"unable to get local address: ");
 
-  strnum[fmt_ulong(strnum,portlocal)] = 0;
+  strnum[fmt_ulong(strnum,port)] = 0;
   env("SSLLOCALPORT",strnum);
   if (flagtcpenv) env("TCPLOCALPORT",strnum);
-  ipstr[ip4_fmt(ipstr,iplocal)] = 0;
-  env("SSLLOCALIP",ipstr);
-  if (flagtcpenv) env("TCPLOCALIP",ipstr);
+  if (ip_fmt(&ipstr,&local)) nomem();
+  env("SSLLOCALIP",ipstr.s);
+  if (flagtcpenv) env("TCPLOCALIP",ipstr.s);
 
   x = forcelocal;
   if (!x)
-    if (dns_name4(&tmp,iplocal) == 0) {
-      if (!stralloc_0(&tmp)) nomem();
+    if (dns_name(&tmp,&local) == 0) {
       x = tmp.s;
     }
   env("SSLLOCALHOST",x);
   if (flagtcpenv) env("TCPLOCALHOST",x);
 
-  if (socket_remote4(s,ipremote,&portremote) == -1)
+  if (socket_remote(s,&remote,&port) == -1)
     strerr_die2sys(111,FATAL,"unable to get remote address: ");
 
-  strnum[fmt_ulong(strnum,portremote)] = 0;
+  strnum[fmt_ulong(strnum,port)] = 0;
   env("SSLREMOTEPORT",strnum);
   if (flagtcpenv) env("TCPREMOTEPORT",strnum);
-  ipstr[ip4_fmt(ipstr,ipremote)] = 0;
-  env("SSLREMOTEIP",ipstr);
-  if (flagtcpenv) env("TCPREMOTEIP",ipstr);
+  if (ip_fmt(&ipstr,&remote)) nomem();
+  env("SSLREMOTEIP",ipstr.s);
+  if (flagtcpenv) env("TCPREMOTEIP",ipstr.s);
   if (verbosity >= 2)
-    strerr_warn4("sslclient: connected to ",ipstr," port ",strnum,0);
+    strerr_warn4("sslclient: connected to ",ipstr.s," port ",strnum,0);
 
   x = 0;
   if (flagremotehost)
-    if (dns_name4(&tmp,ipremote) == 0) {
-      if (!stralloc_0(&tmp)) nomem();
+    if (dns_name(&tmp,&remote) == 0) {
       x = tmp.s;
     }
   env("SSLREMOTEHOST",x);
@@ -298,7 +312,7 @@ int main(int argc,char * const *argv) {
 
   x = 0;
   if (flagremoteinfo)
-    if (remoteinfo(&tmp,ipremote,portremote,iplocal,portlocal,itimeout) == 0) {
+    if (remoteinfo(&tmp,&remote,&local,itimeout) == 0) {
       if (!stralloc_0(&tmp)) nomem();
       x = tmp.s;
     }

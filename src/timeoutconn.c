@@ -4,13 +4,13 @@
 #include "error.h"
 #include "timeoutconn.h"
 
-int timeoutconn(int s,char ip[4],uint16 port,unsigned int timeout)
+int timeoutconn(int s,socket_address *remote,unsigned int timeout)
 {
   struct taia now;
   struct taia deadline;
   iopause_fd x;
 
-  if (socket_connect4(s,ip,port) == -1) {
+  if (connect(s,(struct sockaddr *)remote,sizeof *remote) == -1) {
     if ((errno != error_wouldblock) && (errno != error_inprogress)) return -1;
     x.fd = s;
     x.events = IOPAUSE_WRITE;

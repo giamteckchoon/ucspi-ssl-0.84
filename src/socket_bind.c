@@ -1,27 +1,19 @@
 #include <sys/types.h>
 #include <sys/param.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
+#include "ip.h"
 #include "byte.h"
 #include "socket.h"
 
-int socket_bind4(int s,char ip[4],uint16 port)
+int socket_bind(int s,struct addrinfo *ai)
 {
-  struct sockaddr_in sa;
-
-  byte_zero(&sa,sizeof sa);
-  sa.sin_family = AF_INET;
-  uint16_pack_big((char *) &sa.sin_port,port);
-  byte_copy((char *) &sa.sin_addr,4,ip);
-
-  return bind(s,(struct sockaddr *) &sa,sizeof sa);
+  return bind(s,ai->ai_addr,ai->ai_addrlen);
 }
 
-int socket_bind4_reuse(int s,char ip[4],uint16 port)
+int socket_bind_reuse(int s,struct addrinfo *ai)
 {
   int opt = 1;
   setsockopt(s,SOL_SOCKET,SO_REUSEADDR,&opt,sizeof opt);
-  return socket_bind4(s,ip,port);
+  return socket_bind(s,ai);
 }
 
 void socket_tryreservein(int s,int size)

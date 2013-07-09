@@ -12,7 +12,7 @@
 #include "byte.h"
 #include "fmt.h"
 #include "scan.h"
-#include "ip4.h"
+#include "ip.h"
 #include "fd.h"
 #include "exit.h"
 #include "env.h"
@@ -32,7 +32,6 @@
 #include "remoteinfo.h"
 #include "rules.h"
 #include "sig.h"
-#include "dns.h"
 #include "auto_cafile.h"
 #include "auto_cadir.h"
 #include "auto_ccafile.h"
@@ -62,16 +61,14 @@ static stralloc tcpremoteinfo;
 
 uint16 localport;
 char localportstr[FMT_ULONG];
-char localip[4];
-char localipstr[IP4_FMT];
-static stralloc localhostsa;
+socket_address localaddr = {0};
+static stralloc localhostsa = {0}, localipsa = {0};
 const char *localhost = 0;
 
 uint16 remoteport;
 char remoteportstr[FMT_ULONG];
-char remoteip[4];
-char remoteipstr[IP4_FMT];
-static stralloc remotehostsa;
+socket_address remoteaddr = {0};
+static stralloc remotehostsa = {0}, remoteipsa = {0};
 char *remotehost = 0;
 char *verifyhost = 0;
 
@@ -82,8 +79,6 @@ char strnum[FMT_ULONG];
 char strnum2[FMT_ULONG];
 
 static stralloc tmp;
-static stralloc fqdn;
-static stralloc addresses;
 
 char bspace[16];
 buffer b;
@@ -202,26 +197,43 @@ void doit(int t) {
   if (pipe(po) == -1) strerr_die2sys(111,DROP,"unable to create pipe: ");
   if (socketpair(AF_UNIX, SOCK_STREAM, 0, sslctl) == -1) strerr_die2sys(111,DROP,"unable to create socketpair: ");
  
-  remoteipstr[ip4_fmt(remoteipstr,remoteip)] = 0;
+  if ((j = ip_fmt(&remoteipsa,&remoteaddr)))
+    strerr_die3x(111,DROP,"unable to print remote ip",gai_strerror(j));
 
-  if (flagremotehost)
-    if (dns_name4(&remotehostsa,remoteip) == 0)
+  if (flagremotehost) {
+    if (dns_name(&remotehostsa,&remoteaddr) == 0)
       if (remotehostsa.len) {
 	if (flagparanoid) {
-	  verifyhost = remoteipstr;
-	  if (dns_ip4(&tmp,&remotehostsa) == 0)
-	    for (j = 0;j + 4 <= tmp.len;j += 4)
-	      if (byte_equal(remoteip,4,tmp.s + j)) {
+	  struct addrinfo *reverse, hints = {0};
+	  verifyhost = remoteipsa.s;
+	  hints.ai_family = remoteaddr.sa4.sin_family;
+	  if (remoteaddr.sa6.sin6_family == AF_INET6) {
+	    hints.ai_flags = AI_V4MAPPED | AI_ALL;
+	  }
+	  if (getaddrinfo(remotehostsa.s, NULL, &hints, &reverse) == 0) {
+	    hints.ai_next = reverse;
+	    while (hints.ai_next) {
+	      if (hints.ai_next->ai_family == AF_INET
+		  && remoteaddr.sa4.sin_family == AF_INET
+		  && byte_equal(&remoteaddr.sa4.sin_addr, 4, &((struct sockaddr_in*) hints.ai_next->ai_addr)->sin_addr)
+		  || hints.ai_next->ai_family == AF_INET6
+		     && remoteaddr.sa6.sin6_family == AF_INET6
+		     && byte_equal(remoteaddr.sa6.sin6_addr.s6_addr, 16,
+				   &((struct sockaddr_in6*) hints.ai_next->ai_addr)->sin6_addr.s6_addr)) {
 		flagparanoid = 0;
 		break;
 	      }
+	      hints.ai_next = hints.ai_next->ai_next;
+	    }
+	    freeaddrinfo(reverse);
 	  }
+	}
 	if (!flagparanoid) {
-	  if (!stralloc_0(&remotehostsa)) drop_nomem();
 	  remotehost = remotehostsa.s;
 	  verifyhost = remotehostsa.s;
 	}
       }
+  }
 
   switch(childpid=fork()) {
     case -1:
@@ -328,42 +340,43 @@ void doit(int t) {
 
   if (verbosity >= 2) {
     strnum[fmt_ulong(strnum,getpid())] = 0;
-    strerr_warn4("sslserver: pid ",strnum," from ",remoteipstr,0);
+    strerr_warn4("sslserver: pid ",strnum," from ",remoteipsa.s,0);
   }
 
-  if (socket_local4(t,localip,&localport) == -1)
+  if (socket_local(t,&localaddr,&localport) == -1)
     strerr_die2sys(111,DROP,"unable to get local address: ");
 
-  localipstr[ip4_fmt(localipstr,localip)] = 0;
+  if ((j = ip_fmt(&localipsa,&localaddr)))
+    strerr_die3x(111,DROP,"unable to print local address: ",gai_strerror(j));
   remoteportstr[fmt_ulong(remoteportstr,remoteport)] = 0;
 
   if (!localhost)
-    if (dns_name4(&localhostsa,localip) == 0)
+    if (dns_name(&localhostsa,&localaddr) == 0)
       if (localhostsa.len) {
 	if (!stralloc_0(&localhostsa)) drop_nomem();
 	localhost = localhostsa.s;
       }
   env("PROTO","SSL");
-  env("SSLLOCALIP",localipstr);
+  env("SSLLOCALIP",localipsa.s);
   env("SSLLOCALPORT",localportstr);
   env("SSLLOCALHOST",localhost);
   if (flagtcpenv) {
-    env("TCPLOCALIP",localipstr);
+    env("TCPLOCALIP",localipsa.s);
     env("TCPLOCALPORT",localportstr);
     env("TCPLOCALHOST",localhost);
   }
 
-  env("SSLREMOTEIP",remoteipstr);
+  env("SSLREMOTEIP",remoteipsa.s);
   env("SSLREMOTEPORT",remoteportstr);
   env("SSLREMOTEHOST",remotehost);
   if (flagtcpenv) {
-    env("TCPREMOTEIP",remoteipstr);
+    env("TCPREMOTEIP",remoteipsa.s);
     env("TCPREMOTEPORT",remoteportstr);
     env("TCPREMOTEHOST",remotehost);
   }
 
   if (flagremoteinfo) {
-    if (remoteinfo(&tcpremoteinfo,remoteip,remoteport,localip,localport,timeout) == -1)
+    if (remoteinfo(&tcpremoteinfo,&remoteaddr,&localaddr,timeout) == -1)
       flagremoteinfo = 0;
     if (!stralloc_0(&tcpremoteinfo)) drop_nomem();
   }
@@ -379,7 +392,7 @@ void doit(int t) {
       if (!flagallownorules) drop_rules();
     }
     else {
-      if (rules(found,fdrules,remoteipstr,remotehost,flagremoteinfo ? tcpremoteinfo.s : 0) == -1)
+      if (rules(found,fdrules,&remoteaddr,remotehost,flagremoteinfo ? tcpremoteinfo.s : 0) == -1)
 	drop_rules();
       close(fdrules);
     }
@@ -391,10 +404,10 @@ void doit(int t) {
     safecats(flagdeny ? "deny" : "ok");
     cats(" "); safecats(strnum);
     cats(" "); if (localhost) safecats(localhost);
-    cats(":"); safecats(localipstr);
+    cats(":"); safecats(localipsa.s);
     cats(":"); safecats(localportstr);
     cats(" "); if (remotehost) safecats(remotehost);
-    cats(":"); safecats(remoteipstr);
+    cats(":"); safecats(remoteipsa.s);
     cats(":"); if (flagremoteinfo) safecats(tcpremoteinfo.s);
     cats(":"); safecats(remoteportstr);
     cats("\n");
@@ -481,7 +494,7 @@ void usage(void)
 {
   strerr_warn1("\
 sslserver: usage: sslserver \
-[ -13UXpPhHrRoOdDqQviIeEsSnN ] \
+[ -1346UXpPhHrRoOdDqQviIeEsSnN ] \
 [ -c limit ] \
 [ -x rules.cdb ] \
 [ -B banner ] \
@@ -551,13 +564,14 @@ int passwd_cb(char *buff,int size,int rwflag,void *userdata) {
 int main(int argc,char * const *argv) {
   const char *hostname;
   int opt;
-  struct servent *se;
   char *x;
   unsigned long u;
   int s;
   int t;
+  int flagv4 = 1, flagv6 = 1, rc;
+  struct addrinfo *localai = NULL, hints = {0}, *ai;
  
-  while ((opt = getopt(argc,argv,"dDvqQhHrR1UXx:t:T:u:g:l:b:B:c:pPoO3IiEeSsw:nN")) != opteof)
+  while ((opt = getopt(argc,argv,"dDvqQhHrR1UXx:t:T:u:g:l:b:B:c:pPoO3IiEeSsw:nN46")) != opteof)
     switch(opt) {
       case 'b': scan_ulong(optarg,&backlog); break;
       case 'c': scan_ulong(optarg,&limit); break;
@@ -595,8 +609,11 @@ int main(int argc,char * const *argv) {
       case 'e': flagtcpenv = 1; break;
       case 'n': flagsslwait = 1; break;
       case 'N': flagsslwait = 0; break;
+      case '4': flagv6 = 0; break;
+      case '6': flagv4 = 0; break;
       default: usage();
     }
+  if (flagv4 == flagv6) { flagv4 = flagv6 = 1; }
   argc -= optind;
   argv += optind;
 
@@ -605,20 +622,23 @@ int main(int argc,char * const *argv) {
  
   hostname = *argv++;
   if (!hostname) usage();
-  if (str_equal(hostname,"")) hostname = "0.0.0.0";
-  if (str_equal(hostname,"0")) hostname = "0.0.0.0";
+  if (str_equal(hostname,"")) hostname = NULL;
+  if (str_equal(hostname,"0")) hostname = NULL;
 
   x = *argv++;
   if (!x) usage();
   prog = argv;
   if (!*argv) usage();
-  if (!x[scan_ulong(x,&u)])
-    localport = u;
-  else {
-    se = getservbyname(x,"tcp");
-    if (!se)
-      strerr_die3x(111,FATAL,"unable to figure out port number for ",x);
-    localport = ntohs(se->s_port);
+
+  hints.ai_family = flagv4 == flagv6 ? AF_UNSPEC : flagv4 ? AF_INET : AF_INET6;
+  hints.ai_socktype = SOCK_STREAM;
+  hints.ai_flags = AI_PASSIVE;
+  if ((rc = getaddrinfo(hostname, x, &hints, &localai))) {
+    strerr_die(111,FATAL "unable to figure out address for ", hostname ? hostname : "0",
+		" ",x,": ",gai_strerror(rc),0);
+  }
+  if (!localai) {
+    strerr_die2x(111,FATAL,"address not found");
   }
 
   if (x = env_get("VERIFYDEPTH")) {
@@ -655,26 +675,22 @@ int main(int argc,char * const *argv) {
   sig_catch(sig_child,sigchld);
   sig_catch(sig_term,sigterm);
   sig_ignore(sig_pipe);
- 
-  if (!stralloc_copys(&tmp,hostname))
-    strerr_die2x(111,FATAL,"out of memory");
-  if (dns_ip4_qualify(&addresses,&fqdn,&tmp) == -1)
-    strerr_die4sys(111,FATAL,"temporarily unable to figure out IP address for ",hostname,": ");
-  if (addresses.len < 4)
-    strerr_die3x(111,FATAL,"no IP address for ",hostname);
-  byte_copy(localip,4,addresses.s);
 
-  s = socket_tcp();
-  if (s == -1)
-    strerr_die2sys(111,FATAL,"unable to create socket: ");
+  for (ai = localai; ai; ai = ai->ai_next) { 
+    s = socket_tcp(ai->ai_family, ai->ai_protocol);
+    if (s == -1)
+      strerr_die2sys(111,FATAL,"unable to create socket: ");
 
-  if (socket_bind4_reuse(s,localip,localport) == -1)
-    strerr_die2sys(111,FATAL,"unable to bind: ");
+    if (socket_bind_reuse(s,ai) == -1)
+      strerr_die2sys(111,FATAL,"unable to bind: ");
 
-  if (socket_local4(s,localip,&localport) == -1)
-    strerr_die2sys(111,FATAL,"unable to get local address: ");
-  if (socket_listen(s,backlog) == -1)
-    strerr_die2sys(111,FATAL,"unable to listen: ");
+    if (socket_local(s,&localaddr,&localport) == -1)
+      strerr_die2sys(111,FATAL,"unable to get local address: ");
+    if (socket_listen(s,backlog) == -1)
+      strerr_die2sys(111,FATAL,"unable to listen: ");
+    break;
+  }
+  freeaddrinfo(localai); localai = NULL;
   ndelay_off(s);
 
   localportstr[fmt_ulong(localportstr,localport)] = 0;
@@ -741,7 +757,7 @@ int main(int argc,char * const *argv) {
     while (numchildren >= limit) sig_pause();
 
     sig_unblock(sig_child);
-    t = socket_accept4(s,remoteip,&remoteport);
+    t = socket_accept(s,&remoteaddr,&remoteport);
     sig_block(sig_child);
 
     if (t == -1) continue;

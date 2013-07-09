@@ -3,7 +3,8 @@
 
 #include "stralloc.h"
 #include "uint16.h"
+#include "ip.h"
 
-extern int remoteinfo(stralloc *,char *,uint16,char *,uint16,unsigned int);
+extern int remoteinfo(stralloc *,socket_address *,socket_address *,unsigned int);
 
 #endif

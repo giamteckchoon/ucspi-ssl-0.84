@@ -1,8 +1,8 @@
 --- sslclient prints usage message without enough arguments
-sslclient: usage: sslclient [ -3hHrRdDqQveEsSnNxX ] [ -i localip ] [ -p localport ] [ -T timeoutconn ] [ -l localname ] [ -t timeoutinfo ] [ -a cafile ] [ -A cadir ] [ -c certfile ] [ -z ciphers ] [ -k keyfile ] [ -V verifydepth ] [ -w progtimeout ] host port program
+sslclient: usage: sslclient [ -346hHrRdDqQveEsSnNxX ] [ -i localip ] [ -p localport ] [ -T timeoutconn ] [ -l localname ] [ -t timeoutinfo ] [ -a cafile ] [ -A cadir ] [ -c certfile ] [ -z ciphers ] [ -k keyfile ] [ -V verifydepth ] [ -w progtimeout ] host port program
 100
 --- sslclient prints error message with unknown port name
-sslclient: fatal: unable to figure out port number for nonexistentport
+sslclient: fatal: temporarily unable to figure out IP address for 127.0.0.1: Servname not supported for ai_socktype
 111
 --- sslclient prints error message when connection fails
 sslclient: unable to connect to 127.0.0.1 port 16: connection refused
@@ -19,26 +19,28 @@ sslclient: unable to connect to 127.0.0.1 port 16: connection refused
 sslclient: unable to connect to 127.0.0.1 port 16: connection refused
 111
 --- sslclient prints error message with unknown host name
-sslclient: fatal: no IP address for nonexistent.local.
+sslclient: fatal: temporarily unable to figure out IP address for nonexistent.local.: Name or service not known
 111
 --- sslclient prints error message with unresolvable host name
-sslclient: fatal: temporarily unable to figure out IP address for thislabelistoolongbecausednshasalimitof63charactersinasinglelabel.: protocol error
+sslclient: fatal: temporarily unable to figure out IP address for thislabelistoolongbecausednshasalimitof63charactersinasinglelabel.: Name or service not known
 111
 --- sslserver prints usage message without enough arguments
-sslserver: usage: sslserver [ -13UXpPhHrRoOdDqQviIeEsSnN ] [ -c limit ] [ -x rules.cdb ] [ -B banner ] [ -g gid ] [ -u uid ] [ -b backlog ] [ -l localname ] [ -t timeout ] [ -T ssltimeout ] [ -w progtimeout ] host port program
+sslserver: usage: sslserver [ -1346UXpPhHrRoOdDqQviIeEsSnN ] [ -c limit ] [ -x rules.cdb ] [ -B banner ] [ -g gid ] [ -u uid ] [ -b backlog ] [ -l localname ] [ -t timeout ] [ -T ssltimeout ] [ -w progtimeout ] host port program
 100
 --- sslserver prints error message with unknown port name
-sslserver: fatal: unable to figure out port number for nonexistentport
+sslserver: fatal: unable to figure out address for 0 nonexistentport: Servname not supported for ai_socktype
 111
 --- sslserver prints error message with unknown host name
-sslserver: fatal: no IP address for nonexistent.local.
+sslserver: fatal: unable to figure out address for nonexistent.local. 016: Name or service not known
 111
 --- sslserver prints error message with unresolvable host name
-sslserver: fatal: temporarily unable to figure out IP address for thislabelistoolongbecausednshasalimitof63charactersinasinglelabel.: protocol error
+sslserver: fatal: unable to figure out address for thislabelistoolongbecausednshasalimitof63charactersinasinglelabel. 50016: Name or service not known
 111
 --- sslserver prints error message with non-local host name
 sslserver: fatal: unable to bind: ...
 111
+--- sslserver -4 works
+sslserver: fatal: unable to bind: address already used
 --- sslserver sets basic environment variables
 banner
 PROTO=SSL
@@ -722,8 +724,15 @@ SSL_CLIENT_CERT_CHAIN_1=unset
 --- sslclient looks up host names properly
 sslclient: fatal: certificate name does not match server hostname: 127.0.0.1
 111
---- sslclient -v works
+--- sslclient -4 -v works
 sslclient: connected to 127.0.0.1 port 50016
+sslclient: ssl connect
+ok
+0
+--- sslclient -6 works
+sslclient: unable to connect to ::1 port 50016: connection refused
+111
+sslclient: connected to ::1 port 50017
 sslclient: ssl connect
 ok
 0
@@ -1018,9 +1027,8 @@ sslclient: error:14094410:SSL routines:SSL3_READ_BYTES:sslv3 alert handshake fai
 sslclient: fatal: unable to SSL connect:protocol error
 111
 --- sslserver prints error for bad client certificate
+sslclient: unable to connect to ::1 port 50015: connection refused
 sslclient: connected to 127.0.0.1 port 50015
-sslclient: fatal: unable to SSL connect:protocol error
-sslclient: error:14094413:SSL routines:SSL3_READ_BYTES:sslv3 alert unsupported certificate
 sslclient: fatal: unable to SSL connect:protocol error
 111
 --- sslserver -N does not check certificate CN
@@ -1038,6 +1046,7 @@ sslclient: ssl connect
 ok
 0
 --- sslclient uses certificates
+sslclient: unable to connect to ::1 port 50015: connection refused
 sslclient: connected to 127.0.0.1 port 50015
 sslclient: ssl connect
 banner
@@ -1352,28 +1361,31 @@ SSL_CLIENT_CERT_CHAIN_0=unset
 SSL_CLIENT_CERT_CHAIN_1=unset
 0
 --- sslclient and sslserver handle larger data
+sslclient: unable to connect to ::1 port 50013: connection refused
 sslclient: connected to 127.0.0.1 port 50013
 sslclient: ssl connect
 0
 --- sslserver times out
+sslclient: unable to connect to ::1 port 50013: connection refused
 sslclient: connected to 127.0.0.1 port 50013
 sslclient: ssl connect
 bannerhereur^M
 0
+sslclient: unable to connect to ::1 port 50013: connection refused
 sslclient: connected to 127.0.0.1 port 50013
 sslclient: ssl connect
 banner0
 --- sslprint prints usage message without enough arguments
-sslprint: usage: sslprint [ -13UXpPhHrRoOdDqQviIeEsS ] [ -c limit ] [ -x rules.cdb ] [ -B banner ] [ -g gid ] [ -u uid ] [ -b backlog ] [ -l localname ] [ -t timeout ] [ -T ssltimeout ] [ -w progtimeout ] [ -f lockfile ] host port program
+sslprint: usage: sslprint [ -1346UXpPhHrRoOdDqQviIeEsS ] [ -c limit ] [ -x rules.cdb ] [ -B banner ] [ -g gid ] [ -u uid ] [ -b backlog ] [ -l localname ] [ -t timeout ] [ -T ssltimeout ] [ -w progtimeout ] [ -f lockfile ] host port program
 100
 --- sslprint prints error message with unknown port name
-sslprint: fatal: unable to figure out port number for nonexistentport
+sslprint: fatal: unable to figure out address for 0 nonexistentport: Servname not supported for ai_socktype
 111
 --- sslprint prints error message with unknown host name
-sslprint: fatal: no IP address for nonexistent.local.
+sslprint: fatal: unable to figure out address for nonexistent.local. 016: Name or service not known
 111
 --- sslprint prints error message with unresolvable host name
-sslprint: fatal: temporarily unable to figure out IP address for thislabelistoolongbecausednshasalimitof63charactersinasinglelabel.: protocol error
+sslprint: fatal: unable to figure out address for thislabelistoolongbecausednshasalimitof63charactersinasinglelabel. 016: Name or service not known
 111
 --- sslprint prints error message with non-local host name
 sslprint: fatal: unable to bind: ...
@@ -1745,6 +1757,21 @@ SSL_CLIENT_CERT_CHAIN_0=unset
 SSL_CLIENT_CERT_CHAIN_1=unset
 0
 --- sslserver -1v prints proper messages
+50017
+sslserver: cafile x xxx/rootCA.cert
+sslserver: ccafile x 
+sslserver: cadir x xxx/certs
+sslserver: chainfile x 
+sslserver: cert x xxx/127.0.0.1.cert
+sslserver: key x xxx/127.0.0.1.key
+sslserver: param x xxx
+sslserver: status: 0/1
+sslserver: status: 1/1
+sslserver: pid x from ::x
+sslserver: ok x Localserver:??1:50017 localhost:??1::x
+sslserver: ssl x accept 
+sslserver: end x status 0
+sslserver: status: 0/1
 50016
 sslserver: cafile x xxx/rootCA.cert
 sslserver: ccafile x 

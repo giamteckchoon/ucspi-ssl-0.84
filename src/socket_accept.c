@@ -2,20 +2,21 @@
 #include <sys/param.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include "ip.h"
 #include "byte.h"
 #include "socket.h"
 
-int socket_accept4(int s,char ip[4],uint16 *port)
+int socket_accept(int s,socket_address *sa,uint16 *port)
 {
-  struct sockaddr_in sa;
-  socklen_t dummy = sizeof sa;
+  socklen_t dummy = sizeof *sa;
   int fd;
 
-  fd = accept(s,(struct sockaddr *) &sa,&dummy);
+  fd = accept(s,(struct sockaddr *)sa,&dummy);
   if (fd == -1) return -1;
 
-  byte_copy(ip,4,(char *) &sa.sin_addr);
-  uint16_unpack_big((char *) &sa.sin_port,port);
+  uint16_unpack_big(sa->sa4.sin_family == AF_INET ? &(sa->sa4.sin_port)
+						  : &(sa->sa6.sin6_port),
+		    port);
 
   return fd;
 }

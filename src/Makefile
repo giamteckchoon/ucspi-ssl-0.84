@@ -13,20 +13,18 @@ clean:
 	buffer_0.o buffer_1.o buffer_2.o buffer_copy.o buffer_get.o buffer_put.o \
 	buffer_read.o buffer_write.o byte_chr.o byte_copy.o byte_cr.o \
 	byte_diff.o byte_zero.o case_diffb.o case_diffs.o ccperl cdb.a cdb.o \
-	cdb_hash.o cdb_make.o chkshsgr chkshsgr.o choose coe.o compile dns_dfd.o \
-	dns_domain.o dns_dtda.o dns_ip.o dns_ipq.o dns_name.o dns_nd.o \
-	dns_packet.o dns_random.o dns_rcip.o dns_rcrw.o dns_resolve.o \
-	dns_sortip.o dns_transmit.o dns_txt.o env.o error.o error_str.o \
+	cdb_hash.o cdb_make.o chkshsgr chkshsgr.o choose coe.o compile dns_name.o \
+	env.o error.o error_str.o \
 	fd_copy.o fd_move.o fmt_ulong.o getln.o getln2.o hasflock.h hassgact.h \
-	hassgprm.h hasshsgr.h haswaitp.h https@ iopause.h iopause.o ip4_fmt.o \
-	ip4_scan.o it it-base it-sslperl load lock_ex.o lock_un.o makelib \
+	hassgprm.h hasshsgr.h haswaitp.h https@ iopause.h iopause.o ip_fmt.o \
+	it it-base it-sslperl load lock_ex.o lock_un.o makelib \
 	ndelay_off.o ndelay_on.o open_append.o open_read.o open_trunc.o \
 	openreadclose.o pathexec_env.o pathexec_run.o perlembed.lib prot.o \
 	readclose.o remoteinfo.o rules.o scan_uint.o scan_ulong.o seek_set.o \
 	select.h sgetopt.o sig.o sig_block.o sig_catch.o sig_pause.o socket.lib \
 	socket_accept.o socket_bind.o socket_conn.o socket_delay.o \
 	socket_listen.o socket_local.o socket_opts.o socket_remote.o \
-	socket_tcp.o socket_udp.o ucspissl.a ucspissl.o ssl_ca.o ssl_cca.o ssl_certkey.o \	
+	socket_tcp.o ucspissl.a ucspissl.o ssl_ca.o ssl_cca.o ssl_certkey.o \	
 	ssl_chainfile.o \
 	ssl_ciphers.o ssl_context.o ssl_env.o ssl_error.o ssl_io.o ssl_new.o \
 	ssl_params.o ssl_timeoutaccept.o ssl_timeoutconn.o ssl_verify.o sslcat \
@@ -186,75 +184,8 @@ compile: conf-cc conf-ssl print-cc.sh systype warn-auto.sh
 	sh print-cc.sh > compile
 	chmod 755 compile
 
-dns_dfd.o: compile dns_dfd.c error.h alloc.h byte.h dns.h stralloc.h \
-iopause.h taia.h gen_alloc.h taia.h tai.h tai.h uint64.h uint64.h
-	./compile dns_dfd.c
-
-dns_domain.o: compile dns_domain.c error.h alloc.h case.h byte.h dns.h \
-stralloc.h iopause.h taia.h gen_alloc.h taia.h tai.h tai.h uint64.h \
-uint64.h
-	./compile dns_domain.c
-
-dns_dtda.o: compile dns_dtda.c stralloc.h dns.h gen_alloc.h stralloc.h \
-iopause.h taia.h gen_alloc.h taia.h tai.h tai.h uint64.h uint64.h
-	./compile dns_dtda.c
-
-dns_ip.o: compile dns_ip.c stralloc.h uint16.h byte.h dns.h gen_alloc.h \
-stralloc.h iopause.h taia.h gen_alloc.h taia.h tai.h tai.h uint64.h \
-uint64.h
-	./compile dns_ip.c
-
-dns_ipq.o: compile dns_ipq.c stralloc.h case.h byte.h str.h dns.h \
-gen_alloc.h stralloc.h iopause.h taia.h gen_alloc.h taia.h tai.h tai.h \
-uint64.h uint64.h
-	./compile dns_ipq.c
-
-dns_name.o: compile dns_name.c stralloc.h uint16.h byte.h dns.h \
-gen_alloc.h stralloc.h iopause.h taia.h gen_alloc.h taia.h tai.h tai.h \
-uint64.h uint64.h
+dns_name.o: compile dns_name.c stralloc.h ip.h str.h
 	./compile dns_name.c
-
-dns_nd.o: compile dns_nd.c byte.h fmt.h dns.h stralloc.h iopause.h taia.h \
-gen_alloc.h taia.h tai.h tai.h uint64.h uint64.h
-	./compile dns_nd.c
-
-dns_packet.o: compile dns_packet.c error.h dns.h stralloc.h iopause.h \
-taia.h gen_alloc.h taia.h tai.h tai.h uint64.h uint64.h
-	./compile dns_packet.c
-
-dns_random.o: compile dns_random.c dns.h taia.h uint32.h stralloc.h \
-iopause.h taia.h tai.h gen_alloc.h taia.h tai.h uint64.h tai.h uint64.h \
-uint64.h
-	./compile dns_random.c
-
-dns_rcip.o: compile dns_rcip.c taia.h openreadclose.h byte.h ip4.h env.h \
-dns.h tai.h stralloc.h stralloc.h iopause.h taia.h uint64.h gen_alloc.h \
-gen_alloc.h taia.h tai.h tai.h uint64.h uint64.h
-	./compile dns_rcip.c
-
-dns_rcrw.o: compile dns_rcrw.c taia.h env.h byte.h str.h openreadclose.h \
-dns.h tai.h stralloc.h stralloc.h iopause.h taia.h uint64.h gen_alloc.h \
-gen_alloc.h taia.h tai.h tai.h uint64.h uint64.h
-	./compile dns_rcrw.c
-
-dns_resolve.o: compile dns_resolve.c iopause.h taia.h byte.h dns.h taia.h \
-tai.h stralloc.h iopause.h taia.h tai.h uint64.h gen_alloc.h taia.h tai.h \
-uint64.h tai.h uint64.h uint64.h
-	./compile dns_resolve.c
-
-dns_sortip.o: compile dns_sortip.c byte.h dns.h stralloc.h iopause.h \
-taia.h gen_alloc.h taia.h tai.h tai.h uint64.h uint64.h
-	./compile dns_sortip.c
-
-dns_transmit.o: compile dns_transmit.c socket.h alloc.h error.h byte.h \
-uint16.h dns.h uint16.h stralloc.h iopause.h taia.h gen_alloc.h taia.h \
-tai.h tai.h uint64.h uint64.h
-	./compile dns_transmit.c
-
-dns_txt.o: compile dns_txt.c stralloc.h uint16.h byte.h dns.h gen_alloc.h \
-stralloc.h iopause.h taia.h gen_alloc.h taia.h tai.h tai.h uint64.h \
-uint64.h
-	./compile dns_txt.c
 
 env.o: compile env.c str.h env.h
 	./compile env.c
@@ -312,14 +243,11 @@ iopause.o: compile iopause.c taia.h select.h iopause.h tai.h taia.h \
 uint64.h tai.h uint64.h
 	./compile iopause.c
 
-ip4_fmt.o: compile ip4_fmt.c fmt.h ip4.h
-	./compile ip4_fmt.c
-
-ip4_scan.o: compile ip4_scan.c scan.h ip4.h
-	./compile ip4_scan.c
+ip_fmt.o: compile ip_fmt.c stralloc.h ip.h str.h
+	./compile ip_fmt.c
 
 ip4_bit.o: \
-compile ip4_bit.c ip4_bit.h ip4.h byte.h scan.h fmt.h str.h
+compile ip4_bit.c ip4_bit.h byte.h scan.h fmt.h str.h
 	./compile ip4_bit.c
 
 it: it-base it-sslperl sysdeps
@@ -382,12 +310,12 @@ readclose.o: compile readclose.c error.h readclose.h stralloc.h \
 gen_alloc.h
 	./compile readclose.c
 
-remoteinfo.o: compile remoteinfo.c fmt.h buffer.h socket.h error.h \
+remoteinfo.o: compile remoteinfo.c fmt.h buffer.h socket.h error.h ip.h \
 iopause.h timeoutconn.h remoteinfo.h uint16.h taia.h uint16.h stralloc.h \
 uint16.h tai.h gen_alloc.h uint64.h
 	./compile remoteinfo.c
 
-rules.o: compile rules.c alloc.h stralloc.h open.h cdb.h rules.h \
+rules.o: compile rules.c alloc.h stralloc.h open.h cdb.h rules.h ip.h \
 gen_alloc.h uint32.h stralloc.h gen_alloc.h ip4_bit.h
 	./compile rules.c
 
@@ -424,35 +352,32 @@ socket.lib: trylsock.c compile load
 	&& echo -lsocket -lnsl || exit 0 ) > socket.lib
 	rm -f trylsock.o trylsock
 
-socket_accept.o: compile socket_accept.c byte.h socket.h uint16.h
+socket_accept.o: compile socket_accept.c byte.h socket.h uint16.h ip.h stralloc.h
 	./compile socket_accept.c
 
-socket_bind.o: compile socket_bind.c byte.h socket.h uint16.h
+socket_bind.o: compile socket_bind.c byte.h socket.h uint16.h ip.h stralloc.h
 	./compile socket_bind.c
 
-socket_conn.o: compile socket_conn.c byte.h socket.h uint16.h
+socket_conn.o: compile socket_conn.c byte.h socket.h uint16.h ip.h stralloc.h
 	./compile socket_conn.c
 
-socket_delay.o: compile socket_delay.c socket.h uint16.h
+socket_delay.o: compile socket_delay.c socket.h uint16.h ip.h stralloc.h
 	./compile socket_delay.c
 
-socket_listen.o: compile socket_listen.c socket.h uint16.h
+socket_listen.o: compile socket_listen.c socket.h uint16.h ip.h stralloc.h
 	./compile socket_listen.c
 
-socket_local.o: compile socket_local.c byte.h socket.h uint16.h
+socket_local.o: compile socket_local.c byte.h socket.h uint16.h ip.h stralloc.h
 	./compile socket_local.c
 
-socket_opts.o: compile socket_opts.c socket.h uint16.h
+socket_opts.o: compile socket_opts.c socket.h uint16.h ip.h stralloc.h
 	./compile socket_opts.c
 
-socket_remote.o: compile socket_remote.c byte.h socket.h uint16.h
+socket_remote.o: compile socket_remote.c byte.h socket.h uint16.h ip.h stralloc.h
 	./compile socket_remote.c
 
-socket_tcp.o: compile socket_tcp.c ndelay.h socket.h uint16.h
+socket_tcp.o: compile socket_tcp.c ndelay.h socket.h uint16.h ip.h stralloc.h
 	./compile socket_tcp.c
-
-socket_udp.o: compile socket_udp.c ndelay.h socket.h uint16.h
-	./compile socket_udp.c
 
 ssl_ca.o: compile ssl_ca.c ucspissl.h stralloc.h gen_alloc.h
 	./compile ssl_ca.c
@@ -515,8 +440,8 @@ auto_cafile.o auto_cadir.o auto_ciphers.o socket.lib ssl.lib
 	`cat socket.lib` `cat ssl.lib`
 
 sslclient.o: compile sslclient.c ucspissl.h sig.h exit.h sgetopt.h uint16.h uint64.h \
-fmt.h scan.h str.h ip4.h socket.h fd.h stralloc.h buffer.h tai.h taia.h \
-getln.h error.h strerr.h pathexec.h timeoutconn.h remoteinfo.h dns.h iopause.h \
+fmt.h scan.h str.h ip.h socket.h fd.h stralloc.h buffer.h tai.h taia.h \
+getln.h error.h strerr.h pathexec.h timeoutconn.h remoteinfo.h iopause.h \
 auto_cafile.h auto_cadir.h auto_ciphers.h \
 byte.h ndelay.h wait.h subgetopt.h gen_alloc.h buffer.h stralloc.h
 	./compile sslclient.c
@@ -530,9 +455,9 @@ sslconnect: home warn-auto.sh sslconnect.sh
 	chmod 755 sslconnect
 
 sslhandle.o: compile sslhandle.c ucspissl.h uint16.h str.h byte.h fmt.h scan.h \
-ip4.h fd.h exit.h env.h prot.h open.h wait.h stralloc.h alloc.h buffer.h \
+ip.h fd.h exit.h env.h prot.h open.h wait.h stralloc.h alloc.h buffer.h \
 getln.h error.h strerr.h sgetopt.h socket.h ndelay.h remoteinfo.h rules.h \
-sig.h dns.h auto_cafile.h auto_cadir.h auto_ccafile.h auto_dhfile.h auto_certchainfile.h \
+sig.h auto_cafile.h auto_cadir.h auto_ccafile.h auto_dhfile.h auto_certchainfile.h \
 auto_certfile.h auto_keyfile.h auto_ciphers.h iopause.h coe.h lock.h \
 stralloc.h gen_alloc.h buffer.h stralloc.h subgetopt.h uint16.h \
 stralloc.h uint16.h stralloc.h stralloc.h iopause.h taia.h taia.h \
@@ -574,9 +499,9 @@ rules.o ip4_bit.o remoteinfo.o timeoutconn.o cdb.a ucspissl.a unix.a socket.lib 
 	`cat socket.lib` `cat ssl.lib`
 
 sslserver.o: compile sslserver.c ucspissl.h uint16.h str.h byte.h fmt.h scan.h \
-ip4.h fd.h exit.h env.h prot.h open.h wait.h stralloc.h alloc.h buffer.h \
+ip.h fd.h exit.h env.h prot.h open.h wait.h stralloc.h alloc.h buffer.h \
 getln.h error.h strerr.h sgetopt.h pathexec.h socket.h ndelay.h \
-remoteinfo.h rules.h sig.h dns.h auto_cafile.h auto_cadir.h auto_certchainfile.h \
+remoteinfo.h rules.h sig.h auto_cafile.h auto_cadir.h auto_certchainfile.h \
 auto_ccafile.h auto_dhfile.h auto_certfile.h auto_keyfile.h auto_ciphers.h \
 stralloc.h gen_alloc.h buffer.h stralloc.h subgetopt.h iopause.h taia.h tai.h 
 	./compile sslserver.c
@@ -673,7 +598,7 @@ taia_uint.o: compile taia_uint.c taia.h tai.h uint64.h
 	./compile taia_uint.c
 
 timeoutconn.o: compile timeoutconn.c ndelay.h socket.h iopause.h error.h \
-timeoutconn.h uint16.h taia.h uint16.h tai.h uint64.h
+timeoutconn.h uint16.h taia.h uint16.h tai.h uint64.h ip.h stralloc.h
 	./compile timeoutconn.c
 
 ucspissl.a: makelib ucspissl.o ssl_io.o ssl_context.o ssl_new.o ssl_timeoutconn.o \
@@ -709,7 +634,7 @@ buffer_2.o buffer_get.o buffer_put.o buffer_copy.o buffer_read.o \
 buffer_write.o env.o error.o error_str.o fd_copy.o fd_move.o fmt_ulong.o \
 getln.o getln2.o socket_accept.o socket_bind.o socket_conn.o \
 socket_delay.o socket_listen.o socket_local.o socket_opts.o \
-socket_remote.o socket_tcp.o socket_udp.o ndelay_on.o ndelay_off.o \
+socket_remote.o socket_tcp.o ndelay_on.o ndelay_off.o \
 open_append.o open_read.o open_trunc.o openreadclose.o pathexec_env.o \
 pathexec_run.o prot.o readclose.o seek_set.o sgetopt.o sig.o sig_block.o \
 sig_catch.o sig_pause.o str_chr.o str_diff.o str_len.o str_start.o \
@@ -717,19 +642,16 @@ stralloc_cat.o stralloc_catb.o stralloc_cats.o stralloc_copy.o \
 stralloc_eady.o stralloc_opyb.o stralloc_opys.o stralloc_pend.o \
 strerr_die.o strerr_sys.o subgetopt.o wait_nohang.o wait_pid.o byte_chr.o \
 byte_copy.o byte_cr.o byte_diff.o byte_zero.o case_diffb.o case_diffs.o \
-ip4_fmt.o ip4_scan.o scan_ulong.o scan_uint.o uint16_pack.o \
+ip_fmt.o scan_ulong.o scan_uint.o uint16_pack.o \
 uint16_unpack.o uint32_pack.o uint32_unpack.o iopause.o tai_pack.o \
 taia_add.o taia_approx.o taia_frac.o taia_less.o taia_now.o taia_pack.o \
-taia_sub.o taia_uint.o dns_dfd.o dns_domain.o dns_dtda.o dns_ip.o \
-dns_ipq.o dns_name.o dns_nd.o dns_packet.o dns_random.o dns_rcip.o \
-dns_rcrw.o dns_resolve.o dns_sortip.o dns_transmit.o dns_txt.o lock_ex.o \
-lock_un.o coe.o
+taia_sub.o taia_uint.o dns_name.o lock_ex.o lock_un.o coe.o
 	./makelib unix.a alloc.o alloc_re.o buffer.o buffer_0.o buffer_1.o \
 	buffer_2.o buffer_get.o buffer_put.o buffer_copy.o buffer_read.o \
 	buffer_write.o env.o error.o error_str.o fd_copy.o fd_move.o fmt_ulong.o \
 	getln.o getln2.o socket_accept.o socket_bind.o socket_conn.o \
 	socket_delay.o socket_listen.o socket_local.o socket_opts.o \
-	socket_remote.o socket_tcp.o socket_udp.o ndelay_on.o ndelay_off.o \
+	socket_remote.o socket_tcp.o ndelay_on.o ndelay_off.o \
 	open_append.o open_read.o open_trunc.o openreadclose.o pathexec_env.o \
 	pathexec_run.o prot.o readclose.o seek_set.o sgetopt.o sig.o sig_block.o \
 	sig_catch.o sig_pause.o str_chr.o str_diff.o str_len.o str_start.o \
@@ -737,13 +659,10 @@ lock_un.o coe.o
 	stralloc_eady.o stralloc_opyb.o stralloc_opys.o stralloc_pend.o \
 	strerr_die.o strerr_sys.o subgetopt.o wait_nohang.o wait_pid.o \
 	byte_chr.o byte_copy.o byte_cr.o byte_diff.o byte_zero.o case_diffb.o \
-	case_diffs.o ip4_fmt.o ip4_scan.o scan_ulong.o scan_uint.o uint16_pack.o \
+	case_diffs.o ip_fmt.o scan_ulong.o scan_uint.o uint16_pack.o \
 	uint16_unpack.o uint32_pack.o uint32_unpack.o iopause.o tai_pack.o \
 	taia_add.o taia_approx.o taia_frac.o taia_less.o taia_now.o taia_pack.o \
-	taia_sub.o taia_uint.o dns_dfd.o dns_domain.o dns_dtda.o dns_ip.o \
-	dns_ipq.o dns_name.o dns_nd.o dns_packet.o dns_random.o dns_rcip.o \
-	dns_rcrw.o dns_resolve.o dns_sortip.o dns_transmit.o dns_txt.o lock_ex.o \
-	lock_un.o coe.o
+	taia_sub.o taia_uint.o dns_name.o lock_ex.o lock_un.o coe.o
 
 wait_nohang.o: compile wait_nohang.c haswaitp.h
 	./compile wait_nohang.c

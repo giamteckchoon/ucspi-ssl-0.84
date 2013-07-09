@@ -6,18 +6,6 @@
 #include "byte.h"
 #include "socket.h"
 
-int socket_connect4(int s,const char ip[4],uint16 port)
-{
-  struct sockaddr_in sa;
-
-  byte_zero(&sa,sizeof sa);
-  sa.sin_family = AF_INET;
-  uint16_pack_big((char *) &sa.sin_port,port);
-  byte_copy((char *) &sa.sin_addr,4,ip);
-
-  return connect(s,(struct sockaddr *) &sa,sizeof sa);
-}
-
 int socket_connected(int s)
 {
   struct sockaddr_in sa;
