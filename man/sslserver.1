@@ -69,6 +69,19 @@ Verbose. Print error messages and status messages.
 After preparing to receive connections, 
 print the local port number to standard output. 
 .TP
+.B \-4
+Fall back to IPv4 sockets.  This is necessary for terminally broken
+systems like OpenBSD which will not let IPv6 sockets connect to
+V4-mapped IPv6 addresses.  Please note that this also applies to DNS
+lookups, so you will have to use an DNS resolver with an IPv6 address to
+accept IPv6 connections.  Use \fBDNSCACHEIP\fR to set the DNS resolver
+IP dynamically.
+.TP
+.B \-6
+Force IPv6 mode in UCSPI environment variables, even for
+IPv4 connections.  This will set \fB$PROTO\fR to \fBSSL6\fR and put
+IPv4-mapped IPv6 addresses in \fBTCPLOCALIP\fR and \fBTCPREMOTEIP\fR.
+.TP
 .B \-c \fIn
 Do not handle more than 
 .I n 
