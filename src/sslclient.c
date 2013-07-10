@@ -270,8 +270,6 @@ int main(int argc,char * const *argv) {
 
   CONNECTED:
 
-  env("PROTO","SSL");
-
   if (socket_local(s,&local,&port) == -1)
     strerr_die2sys(111,FATAL,"unable to get local address: ");
 
@@ -298,6 +296,11 @@ int main(int argc,char * const *argv) {
   if (flagtcpenv) env("TCPREMOTEPORT",strnum);
   if (ip_fmt(&ipstr,&remote)) nomem();
   env("SSLREMOTEIP",ipstr.s);
+  /* If ipstr.s contain ':' colon character will assume it is IPv6 */
+  if (byte_chr(ipstr.s, ipstr.len, ':') < ipstr.len)
+    env("PROTO","SSL6");
+  else
+    env("PROTO","SSL");
   if (flagtcpenv) env("TCPREMOTEIP",ipstr.s);
   if (verbosity >= 2)
     strerr_warn4("sslclient: connected to ",ipstr.s," port ",strnum,0);

@@ -356,7 +356,11 @@ void doit(int t) {
 	if (!stralloc_0(&localhostsa)) drop_nomem();
 	localhost = localhostsa.s;
       }
-  env("PROTO","SSL");
+  /* If remoteipsa.s contain ':' colon character will assume it is IPv6 */
+  if (byte_chr(remoteipsa.s, remoteipsa.len, ':') < remoteipsa.len)
+    env("PROTO","SSL6");
+  else
+    env("PROTO","SSL");
   env("SSLLOCALIP",localipsa.s);
   env("SSLLOCALPORT",localportstr);
   env("SSLLOCALHOST",localhost);
